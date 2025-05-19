@@ -27,10 +27,29 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <demi/libos.h>
+
+static int demi_initialised = 0;
+
 int uv_loop_init(uv_loop_t* loop) {
   uv__loop_internal_fields_t* lfields;
   void* saved_data;
   int err;
+
+  if (!demi_initialised) {
+	const struct demi_args args = {
+		.argc = 0,
+		.argv = NULL,
+		.callback = NULL,
+	};
+
+	if (demi_init(&args)) {
+		perror("demi init");
+		abort();
+	}
+	fprintf(stderr, "DEMIKERNEL IS NOW INITIALISED\n");
+	demi_initialised = 1;
+  }
 
 
   saved_data = loop->data;

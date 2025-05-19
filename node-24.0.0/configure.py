@@ -2225,7 +2225,7 @@ def make_bin_override():
 output = {
   'variables': {},
   'include_dirs': [],
-  'libraries': [],
+  'libraries': ["-ldemikernel"],
   'defines': [],
   'cflags': [],
 }
