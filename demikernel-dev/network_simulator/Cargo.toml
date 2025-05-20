@@ -1,0 +1,34 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
+[package]
+name = "demikernel-network-simulator"
+version = "0.1.0"
+authors = ["Microsoft Corporation"]
+edition = "2021"
+description = "Network Testing Tool for Demikernel"
+readme = "README.md"
+homepage = "https://aka.ms/demikernel"
+repository = "https://github.com/demikernel/demikernel"
+license-file = "LICENSE.txt"
+
+[build-dependencies]
+anyhow = "1.0.89"
+cfgrammar = "0.13.7"
+libc = "0.2.159"
+lrlex = "0.13.7"
+lrpar = "0.13.7"
+
+[dependencies]
+clap = "4.5.15"
+
+[[bin]]
+doc = false
+name = "network_simulator"
+path = "src/main.rs"
+
+
+[lib]
+doc = false
+name = "network_simulator"
+path = "src/lib.rs"

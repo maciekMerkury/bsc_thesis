@@ -1,0 +1,74 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
+//======================================================================================================================
+// Imports
+//======================================================================================================================
+
+use anyhow::Result;
+use clap::{Arg, ArgMatches, Command};
+use std::{
+    net::{SocketAddr, SocketAddrV4},
+    str::FromStr,
+};
+
+//======================================================================================================================
+// Program Arguments
+//======================================================================================================================
+
+/// Program Arguments
+#[derive(Debug)]
+pub struct ProgramArguments {
+    /// Address of local.
+    local: SocketAddr,
+    /// Address of remote socket.
+    remote: SocketAddr,
+}
+
+impl ProgramArguments {
+    /// Parses the program arguments from the command line interface.
+    pub fn new() -> Result<Self> {
+        let matches: ArgMatches = Command::new("tcp-tests")
+            .arg(
+                Arg::new("local")
+                    .long("local-address")
+                    .value_parser(clap::value_parser!(String))
+                    .required(true)
+                    .value_name("ADDRESS:PORT")
+                    .help("Sets the address of local socket"),
+            )
+            .arg(
+                Arg::new("remote")
+                    .long("remote-address")
+                    .value_parser(clap::value_parser!(String))
+                    .required(true)
+                    .value_name("ADDRESS:PORT")
+                    .help("Sets the address of remote socket"),
+            )
+            .get_matches();
+
+        // Address of local socket.
+        let local: SocketAddr = SocketAddr::V4({
+            let local: &String = matches.get_one::<String>("local").expect("missing address");
+            SocketAddrV4::from_str(local)?
+        });
+
+        // Address of remote socket.
+        let remote: SocketAddr = SocketAddr::V4({
+            let remote: &String = matches.get_one::<String>("remote").expect("missing address");
+            SocketAddrV4::from_str(remote)?
+        });
+
+        Ok(Self { local, remote })
+    }
+
+    /// Returns the `local` command line argument.
+    pub fn local(&self) -> SocketAddr {
+        self.local
+    }
+
+    /// Returns the `remote` command line argument.
+    pub fn remote(&self) -> SocketAddr {
+        self.remote
+    }
+}
