@@ -45,6 +45,7 @@
 #include <sys/utsname.h>
 #include <sys/time.h>
 #include <time.h> /* clock_gettime */
+#include <demi_epoll/sockets.h>
 
 #ifdef __sun
 # include <sys/filio.h>
@@ -507,6 +508,14 @@ int uv__socket(int domain, int type, int protocol) {
   int sockfd;
   int err;
 
+  if (type == SOCK_STREAM) {
+    sockfd = dsoc_socket(domain, type, protocol);
+    if (sockfd != -1)
+      return sockfd;
+
+    return UV__ERR(errno);
+  }
+
 #if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
   sockfd = socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
   if (sockfd != -1)
@@ -563,6 +572,11 @@ int uv__accept(int sockfd) {
   (void) &err;
   assert(sockfd >= 0);
 
+  peerfd = dsoc_accept(sockfd, NULL, NULL);
+  if (peerfd == -1)
+    return UV__ERR(errno);
+  return peerfd;
+
   do
 #ifdef uv__accept4
     peerfd = uv__accept4(sockfd, NULL, NULL, SOCK_NONBLOCK|SOCK_CLOEXEC);
@@ -598,6 +612,9 @@ int uv__accept(int sockfd) {
  * by making the system call directly. Musl libc is unaffected.
  */
 int uv__close_nocancel(int fd) {
+  // whilst all of those problems here are important,
+  // i only support linux
+  dsoc_close(fd);
 #if defined(__APPLE__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
@@ -724,7 +741,7 @@ ssize_t uv__recvmsg(int fd, struct msghdr* msg, int flags) {
     defined(__OpenBSD__)   || \
     defined(__linux__)
   ssize_t rc;
-  rc = recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC);
+  rc = dsoc_recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC);
   if (rc == -1)
     return UV__ERR(errno);
   return rc;
