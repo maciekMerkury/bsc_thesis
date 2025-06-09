@@ -28,6 +28,8 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <demi_epoll/sockets.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -806,7 +808,7 @@ static int uv__try_write(uv_stream_t* stream,
     memcpy(CMSG_DATA(&cmsg.hdr), &fd_to_send, sizeof(fd_to_send));
 
     do
-      n = sendmsg(uv__stream_fd(stream), &msg, 0);
+      n = dsoc_sendmsg(uv__stream_fd(stream), &msg, 0);
     while (n == -1 && errno == EINTR);
   } else {
     do

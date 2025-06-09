@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
+#include <demi_epoll/sockets.h>
+#include <demi_epoll/log.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -42,7 +44,8 @@ static int maybe_bind_socket(int fd) {
   slen = sizeof(s);
   memset(&s, 0, sizeof(s));
 
-  if (getsockname(fd, &s.addr, &slen))
+
+  if (dsoc_getsockname(fd, &s.addr, &slen))
     return UV__ERR(errno);
 
   if (s.addr.sa_family == AF_INET)
@@ -54,7 +57,7 @@ static int maybe_bind_socket(int fd) {
       return 0;  /* Already bound to a port. */
 
   /* Bind to an arbitrary port. */
-  if (bind(fd, &s.addr, slen))
+  if (dsoc_bind(fd, &s.addr, slen))
     return UV__ERR(errno);
 
   return 0;
@@ -193,7 +196,7 @@ int uv__tcp_bind(uv_tcp_t* tcp,
 #endif
 
   errno = 0;
-  err = bind(tcp->io_watcher.fd, addr, addrlen);
+  err = dsoc_bind(tcp->io_watcher.fd, addr, addrlen);
   if (err == -1 && errno != EADDRINUSE) {
     if (errno == EAFNOSUPPORT)
       /* OSX, other BSDs and SunoS fail with EAFNOSUPPORT when binding a
@@ -307,7 +310,7 @@ int uv__tcp_connect(uv_connect_t* req,
 
   do {
     errno = 0;
-    r = connect(uv__stream_fd(handle), addr, addrlen);
+    r = dsoc_connect(uv__stream_fd(handle), addr, addrlen);
   } while (r == -1 && errno == EINTR);
 
   /* We not only check the return value, but also check the errno != 0.
