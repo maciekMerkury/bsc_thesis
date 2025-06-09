@@ -9,4 +9,5 @@ int dpoll_ctl(int dpollfd, int op, int fd, struct epoll_event *event);
 int dpoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
                 const struct timespec *timeout, const sigset_t *sigmask);
 
-int dsoc_close(int dpollfd);
+/// functions only used when I want to print something
+void debug_print(void);

@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-static int log_enabled = 0;
+static bool log_enabled = true;
 
 static bool env_is_trace(const char *const env_name)
 {

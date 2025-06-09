@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <demi/libos.h>
 #include <unistd.h>
+#include "log.h"
 
 #define DPOLL_EPOLL_OFFSET 0
 
@@ -13,6 +14,7 @@
 
 static int get_epoll_fd(int fd)
 {
+	demi_log("epoll_fd: %d\n", fd);
 	assert(fd >= DPOLL_EPOLL_OFFSET);
 	return fd - DPOLL_EPOLL_OFFSET;
 }
@@ -95,10 +97,29 @@ int dsoc_listen(int qd, int backlog)
 	return listen(fd, backlog);
 }
 
+int dsoc_getsockname(int qd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	const int fd = get_socket_fd(qd);
+	return getsockname(fd, addr, addrlen);
+}
+
+int dsoc_setsockopt(int qd, int level, int optname, const void *optval,
+                    socklen_t optlen)
+{
+	const int fd = get_socket_fd(qd);
+	return setsockopt(fd, level, optname, optval, optlen);
+}
+
 ssize_t dsoc_send(int qd, const void *buf, size_t len)
 {
 	const int fd = get_socket_fd(qd);
 	return send(fd, buf, len, 0);
+}
+
+ssize_t dsoc_sendmsg(int qd, const struct msghdr *msg, int flags)
+{
+	const int fd = get_socket_fd(qd);
+	return sendmsg(fd, msg, flags);
 }
 
 ssize_t dsoc_recv(int qd, void *buf, size_t len)
@@ -107,8 +128,18 @@ ssize_t dsoc_recv(int qd, void *buf, size_t len)
 	return recv(fd, buf, len, 0);
 }
 
+ssize_t dsoc_recvmsg(int qd, struct msghdr *msg, int flags)
+{
+	const int fd = get_socket_fd(qd);
+	return recvmsg(fd, msg, flags);
+}
+
 int dsoc_close(int qd)
 {
 	const int fd = get_socket_fd(qd);
 	return close(fd);
+}
+
+void debug_print(void)
+{
 }
