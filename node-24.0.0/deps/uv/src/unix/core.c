@@ -509,7 +509,7 @@ int uv__socket(int domain, int type, int protocol) {
   int err;
 
   if (type == SOCK_STREAM) {
-    sockfd = dsoc_socket(domain, type, protocol);
+    sockfd = dpoll_socket(domain, type, protocol);
     if (sockfd != -1)
       return sockfd;
 
@@ -572,7 +572,7 @@ int uv__accept(int sockfd) {
   (void) &err;
   assert(sockfd >= 0);
 
-  peerfd = dsoc_accept(sockfd, NULL, NULL);
+  peerfd = dpoll_accept(sockfd, NULL, NULL);
   if (peerfd == -1)
     return UV__ERR(errno);
   return peerfd;
@@ -614,7 +614,7 @@ int uv__accept(int sockfd) {
 int uv__close_nocancel(int fd) {
   // whilst all of those problems here are important,
   // i only support linux
-  return dsoc_close(fd);
+  return dpoll_close(fd);
 #if defined(__APPLE__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
@@ -741,7 +741,7 @@ ssize_t uv__recvmsg(int fd, struct msghdr* msg, int flags) {
     defined(__OpenBSD__)   || \
     defined(__linux__)
   ssize_t rc;
-  rc = dsoc_recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC);
+  rc = dpoll_recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC);
   if (rc == -1)
     return UV__ERR(errno);
   return rc;

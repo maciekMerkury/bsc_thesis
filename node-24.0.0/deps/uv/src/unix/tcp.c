@@ -45,7 +45,7 @@ static int maybe_bind_socket(int fd) {
   memset(&s, 0, sizeof(s));
 
 
-  if (dsoc_getsockname(fd, &s.addr, &slen))
+  if (dpoll_getsockname(fd, &s.addr, &slen))
     return UV__ERR(errno);
 
   if (s.addr.sa_family == AF_INET)
@@ -57,7 +57,7 @@ static int maybe_bind_socket(int fd) {
       return 0;  /* Already bound to a port. */
 
   /* Bind to an arbitrary port. */
-  if (dsoc_bind(fd, &s.addr, slen))
+  if (dpoll_bind(fd, &s.addr, slen))
     return UV__ERR(errno);
 
   return 0;
@@ -196,7 +196,7 @@ int uv__tcp_bind(uv_tcp_t* tcp,
 #endif
 
   errno = 0;
-  err = dsoc_bind(tcp->io_watcher.fd, addr, addrlen);
+  err = dpoll_bind(tcp->io_watcher.fd, addr, addrlen);
   if (err == -1 && errno != EADDRINUSE) {
     if (errno == EAFNOSUPPORT)
       /* OSX, other BSDs and SunoS fail with EAFNOSUPPORT when binding a
@@ -310,7 +310,7 @@ int uv__tcp_connect(uv_connect_t* req,
 
   do {
     errno = 0;
-    r = dsoc_connect(uv__stream_fd(handle), addr, addrlen);
+    r = dpoll_connect(uv__stream_fd(handle), addr, addrlen);
   } while (r == -1 && errno == EINTR);
 
   /* We not only check the return value, but also check the errno != 0.
