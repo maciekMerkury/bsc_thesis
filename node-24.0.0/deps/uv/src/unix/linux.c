@@ -26,6 +26,7 @@
 #include "uv.h"
 #include "internal.h"
 
+#include <demi_epoll/dpoll.h>
 #include <inttypes.h>
 #include <stdatomic.h>
 #include <stddef.h>  /* offsetof */
@@ -586,7 +587,7 @@ static void uv__iou_init(int epollfd,
     e.events = POLLIN;
     e.data.fd = ringfd;
 
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ringfd, &e))
+    if (dpoll_ctl(epollfd, EPOLL_CTL_ADD, ringfd, &e))
       goto fail;
   }
 
@@ -646,7 +647,7 @@ int uv__platform_loop_init(uv_loop_t* loop) {
 
   loop->inotify_watchers = NULL;
   loop->inotify_fd = -1;
-  loop->backend_fd = epoll_create1(O_CLOEXEC);
+  loop->backend_fd = dpoll_create(O_CLOEXEC);
 
   if (loop->backend_fd == -1)
     return UV__ERR(errno);
@@ -728,7 +729,7 @@ void uv__platform_invalidate_fd(uv_loop_t* loop, int fd) {
    * has the EPOLLWAKEUP flag set generates spurious audit syslog warnings.
    */
   memset(&dummy, 0, sizeof(dummy));
-  epoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, fd, &dummy);
+  dpoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, fd, &dummy);
 }
 
 
@@ -741,12 +742,12 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
   e.data.fd = -1;
 
   rc = 0;
-  if (epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &e))
+  if (dpoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &e))
     if (errno != EEXIST)
       rc = UV__ERR(errno);
 
   if (rc == 0)
-    if (epoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, fd, &e))
+    if (dpoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, fd, &e))
       abort();
 
   return rc;
@@ -1423,14 +1424,14 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       continue;
     }
 
-    if (!epoll_ctl(epollfd, op, fd, &e))
+    if (!dpoll_ctl(epollfd, op, fd, &e))
       continue;
 
     assert(op == EPOLL_CTL_ADD);
     assert(errno == EEXIST);
 
     /* File descriptor that's been watched before, update event mask. */
-    if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &e))
+    if (dpoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &e))
       abort();
   }
 
@@ -1462,7 +1463,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
      */
     lfields->current_timeout = timeout;
 
-    nfds = epoll_pwait(epollfd, events, ARRAY_SIZE(events), timeout, sigmask);
+    nfds = dpoll_pwait(epollfd, events, ARRAY_SIZE(events), timeout, sigmask);
 
     /* Update loop->time unconditionally. It's tempting to skip the update when
      * timeout == 0 (i.e. non-blocking poll) but there is no guarantee that the
@@ -1524,7 +1525,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
          * io_uring's submit queue, otherwise the file descriptor may
          * be closed by the time the kernel starts the operation.
          */
-        epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, pe);
+        dpoll_ctl(epollfd, EPOLL_CTL_DEL, fd, pe);
         continue;
       }
 

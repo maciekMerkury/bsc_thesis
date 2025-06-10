@@ -11,7 +11,7 @@ int main(void)
 {
 	demi_log_init();
 
-	int s = dsoc_socket(AF_INET, SOCK_STREAM, 0);
+	int s = dpoll_socket(AF_INET, SOCK_STREAM, 0);
 	assert(s > -1);
 	printf("s: %d\n", s);
 	struct sockaddr_in addr = {
@@ -19,20 +19,20 @@ int main(void)
 		.sin_addr.s_addr = htonl(INADDR_ANY),
 		.sin_port = htons(2137),
 	};
-	int ret = dsoc_bind(s, (void *)&addr, sizeof(addr));
+	int ret = dpoll_bind(s, (void *)&addr, sizeof(addr));
 	assert(ret == 0);
-	ret = dsoc_listen(s, 1);
+	ret = dpoll_listen(s, 1);
 	assert(ret == 0);
-	int other = dsoc_accept(s, NULL, NULL);
+	int other = dpoll_accept(s, NULL, NULL);
 	assert(other > -1);
 	printf("other: %d\n", other);
 
 	char buf[100];
-	ssize_t read = dsoc_recv(other, buf, sizeof(buf) - 1);
+	ssize_t read = dpoll_recv(other, buf, sizeof(buf) - 1);
 	buf[read] = '\0';
 	printf("read: %s\n", buf);
-	dsoc_send(other, buf, read);
-	dsoc_close(other);
-	dsoc_close(s);
+	dpoll_send(other, buf, read);
+	dpoll_close(other);
+	dpoll_close(s);
 	printf("done :)\n");
 }

@@ -1,5 +1,6 @@
 #include "dpoll.h"
 #include <assert.h>
+#include <stdio.h>
 #include <demi/libos.h>
 #include <unistd.h>
 #include "log.h"
@@ -18,9 +19,9 @@ static int get_epoll_fd(int fd)
 	return fd - DPOLL_EPOLL_OFFSET;
 }
 
-int dpoll_create(void)
+int dpoll_create(int flags)
 {
-	int fd = epoll_create(1);
+	int fd = epoll_create1(flags);
 	if (fd < 0)
 		return -1;
 	return fd + DPOLL_EPOLL_OFFSET;
@@ -35,10 +36,10 @@ int dpoll_ctl(int dpollfd, int op, int fd, struct epoll_event *event)
 }
 
 int dpoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
-                const struct timespec *timeout, const sigset_t *sigmask)
+                int timeout, const sigset_t *sigmask)
 {
 	const int epoll = get_epoll_fd(dpollfd);
-	int ret = epoll_pwait2(epoll, events, maxevents, timeout, sigmask);
+	int ret = epoll_pwait(epoll, events, maxevents, timeout, sigmask);
 	if (ret < 0)
 		return -1;
 
@@ -53,8 +54,8 @@ static int get_socket_fd(int fd)
 
 int dpoll_socket(int domain, int type, int protocol)
 {
-	assert(domain == AF_INET);
-	assert(type == SOCK_STREAM || type == SOCK_DGRAM);
+	//	assert(domain == AF_INET);
+	//	assert(type == SOCK_STREAM || type == SOCK_DGRAM);
 
 	int fd = socket(domain, type, protocol);
 	if (fd == -1)
