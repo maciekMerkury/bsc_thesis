@@ -38,6 +38,8 @@
 #include <sys/eventfd.h>
 #endif
 
+#include <demi_epoll/sockets.h>
+
 #if UV__KQUEUE_EVFILT_USER
 static uv_once_t kqueue_runtime_detection_guard = UV_ONCE_INIT;
 static int kqueue_evfilt_user_support = 1;
@@ -172,7 +174,7 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 #else
   for (;;) {
 #endif
-    r = read(w->fd, buf, sizeof(buf));
+    r = dpoll_read(w->fd, buf, sizeof(buf));
 
     if (r == sizeof(buf))
       continue;
@@ -241,7 +243,7 @@ static void uv__async_send(uv_loop_t* loop) {
 #endif
 
   do
-    r = write(fd, buf, len);
+    r = dpoll_write(fd, buf, len);
   while (r == -1 && errno == EINTR);
 
   if (r == len)

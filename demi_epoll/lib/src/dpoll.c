@@ -1,139 +1,159 @@
+#include "impls.h"
 #include "dpoll.h"
-#include <assert.h>
+#include <stdlib.h>
+
+#include <errno.h>
 #include <stdio.h>
-#include <demi/libos.h>
 #include <unistd.h>
+#include <string.h>
+
 #include "log.h"
+#include <sys/socket.h>
+#include <execinfo.h>
+#include <sys/uio.h>
 
-#define DPOLL_EPOLL_OFFSET 0
-
-#define DPOLL_SOCKET_OFFSET 0
-
-//#define DPOLL_EPOLL_OFFSET 65536
-//
-//#define DPOLL_SOCKET_OFFSET (DPOLL_EPOLL_OFFSET + 8)
-
-static int get_epoll_fd(int fd)
-{
-	assert(fd >= DPOLL_EPOLL_OFFSET);
-	return fd - DPOLL_EPOLL_OFFSET;
-}
-
-int dpoll_create(int flags)
-{
-	int fd = epoll_create1(flags);
-	if (fd < 0)
-		return -1;
-	return fd + DPOLL_EPOLL_OFFSET;
-}
-
-int dpoll_ctl(int dpollfd, int op, int fd, struct epoll_event *event)
-{
-	const int epoll = get_epoll_fd(dpollfd);
-	if (fd >= DPOLL_SOCKET_OFFSET)
-		fd -= DPOLL_SOCKET_OFFSET;
-	return epoll_ctl(epoll, op, fd, event);
-}
-
-int dpoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
-                int timeout, const sigset_t *sigmask)
-{
-	const int epoll = get_epoll_fd(dpollfd);
-	int ret = epoll_pwait(epoll, events, maxevents, timeout, sigmask);
-	if (ret < 0)
-		return -1;
-
-	return ret;
-}
-
-static int get_socket_fd(int fd)
-{
-	assert(fd >= DPOLL_SOCKET_OFFSET);
-	return fd - DPOLL_SOCKET_OFFSET;
-}
-
-int dpoll_socket(int domain, int type, int protocol)
-{
-	//	assert(domain == AF_INET);
-	//	assert(type == SOCK_STREAM || type == SOCK_DGRAM);
-
-	int fd = socket(domain, type, protocol);
-	if (fd == -1)
-		return -1;
-	return fd + DPOLL_SOCKET_OFFSET;
-}
-
-int dpoll_bind(int qd, const struct sockaddr *addr, socklen_t addrlen)
-{
-	const int fd = get_socket_fd(qd);
-	return bind(fd, addr, addrlen);
-}
-
-int dpoll_connect(int qd, const struct sockaddr *addr, socklen_t size)
-{
-	const int fd = get_socket_fd(qd);
-	return connect(fd, addr, size);
-}
-
-int dpoll_accept(int qd, struct sockaddr *restrict addr,
-                 socklen_t *restrict addrlen)
-{
-	const int fd = get_socket_fd(qd);
-	int other = accept(fd, addr, addrlen);
-	if (other == -1)
-		return -1;
-	return other + DPOLL_SOCKET_OFFSET;
-}
-
-int dpoll_listen(int qd, int backlog)
-{
-	const int fd = get_socket_fd(qd);
-	return listen(fd, backlog);
-}
-
-int dpoll_getsockname(int qd, struct sockaddr *addr, socklen_t *addrlen)
-{
-	const int fd = get_socket_fd(qd);
-	return getsockname(fd, addr, addrlen);
-}
-
-int dpoll_setsockopt(int qd, int level, int optname, const void *optval,
-                     socklen_t optlen)
-{
-	const int fd = get_socket_fd(qd);
-	return setsockopt(fd, level, optname, optval, optlen);
-}
-
-ssize_t dpoll_send(int qd, const void *buf, size_t len)
-{
-	const int fd = get_socket_fd(qd);
-	return send(fd, buf, len, 0);
-}
-
-ssize_t dpoll_sendmsg(int qd, const struct msghdr *msg, int flags)
-{
-	const int fd = get_socket_fd(qd);
-	return sendmsg(fd, msg, flags);
-}
-
-ssize_t dpoll_recv(int qd, void *buf, size_t len)
-{
-	const int fd = get_socket_fd(qd);
-	return recv(fd, buf, len, 0);
-}
-
-ssize_t dpoll_recvmsg(int qd, struct msghdr *msg, int flags)
-{
-	const int fd = get_socket_fd(qd);
-	return recvmsg(fd, msg, flags);
-}
-
-int dpoll_close(int qd)
-{
-	const int fd = get_socket_fd(qd);
-	return close(fd);
-}
+#define BRUH(call) do { demi_log("calling %s\n", #call); int _ret = call; if (_ret < 0) { demi_log("call failed: %s\n", strerror(errno)); }; return _ret; } while (0)
 
 void debug_print(void)
 {
+}
+
+int dpoll_socket_impl(int domain, int type, int protocol)
+{
+	demi_log("PLEASE FUCKING PRINT\n");
+	BRUH(socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol));
+}
+
+int dpoll_bind_impl(int qd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	BRUH(bind(qd, addr, addrlen));
+}
+
+int dpoll_connect_impl(int qd, const struct sockaddr *addr, socklen_t size)
+{
+	BRUH(connect(qd, addr, size));
+}
+
+int dpoll_accept_impl(int qd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	BRUH(accept(qd, addr, addrlen));
+}
+
+int dpoll_listen_impl(int qd, int backlog)
+{
+	BRUH(listen(qd, backlog));
+}
+
+/// the next 2 functions are not really that supported
+int dpoll_getsockname_impl(int qd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	BRUH(getsockname(qd, addr, addrlen));
+}
+
+int dpoll_setsockopt_impl(int qd, int level, int optname, const void *optval,
+                          socklen_t optlen)
+{
+	BRUH(setsockopt(qd, level, optname, optval, optlen));
+}
+
+ssize_t dpoll_sendmsg_impl(int qd, const struct msghdr *msg, int flags)
+{
+	BRUH(sendmsg(qd, msg, flags));
+}
+
+ssize_t dpoll_recvmsg_impl(int qd, struct msghdr *msg, int flags)
+{
+	BRUH(recvmsg(qd, msg, flags));
+}
+
+int dpoll_close_impl(int qd)
+{
+	if (qd_is_epoll(qd))
+		qd = get_epoll_fd(qd);
+	else
+		qd = get_socket_fd(qd);
+	BRUH(close(qd));
+}
+
+int dpoll_create_impl(int flags)
+{
+	int ret = epoll_create(flags);
+	demi_log("created %d\n", ret);
+	return ret;
+}
+
+static int counter = 0;
+
+static const char *get_op(int op)
+{
+	switch (op) {
+	case EPOLL_CTL_ADD:
+		return "ADD";
+	case EPOLL_CTL_DEL:
+		return "DEL";
+	case EPOLL_CTL_MOD:
+		return "MOD";
+	default:
+		return NULL;
+	}
+}
+
+int dpoll_ctl_impl(int dpollfd, int op, int fd, struct epoll_event *event)
+{
+	// *multiplexing*
+	if (qd_is_dpoll(fd))
+		fd = get_socket_fd(fd);
+	demi_log("[%d]: %s %d\n", dpollfd, get_op(op), fd);
+	if (dpollfd == 13 && op == EPOLL_CTL_ADD)
+		++counter;
+	BRUH(epoll_ctl(dpollfd, op, fd, event));
+}
+
+static int debug_num = 0;
+
+int dpoll_pwait_impl(int dpollfd, struct epoll_event *events, int maxevents,
+                     int timeout, const sigset_t *sigmask)
+{
+	demi_log("%d is waiting for %d\n", dpollfd, timeout);
+	int ret = epoll_pwait(dpollfd, events, maxevents, timeout, sigmask);
+	demi_log("epoll_pwait returned %d\n", ret);
+	if (dpollfd == 13 && ret == 0) {
+		++debug_num;
+		if (debug_num > 100) {
+			demi_log("bruh sus amogus %d\n", debug_num);
+			void *buffer[100];
+			int ntraces = backtrace(buffer, 100);
+			demi_log("backtrace returned %d\n", ntraces);
+			char **bruh = backtrace_symbols(buffer, ntraces);
+			for (int i = 0; i < ntraces; ++i) {
+				demi_log("%s\n", bruh[i]);
+			}
+			free(bruh);
+			demi_log("please brother work\n");
+			return -1;
+		}
+	} else {
+		debug_num = 0;
+	}
+	return ret;
+}
+
+ssize_t dpoll_write_impl(int qd, const void *buf, size_t count)
+{
+	BRUH(write(qd, buf, count));
+}
+
+ssize_t dpoll_read_impl(int qd, void *buf, size_t count)
+{
+	BRUH(read(qd, buf, count));
+}
+
+ssize_t dpoll_readv_impl(int qd, const struct iovec *iov, int iovcnt)
+{
+	BRUH(readv(qd, iov, iovcnt));
+}
+
+ssize_t dpoll_writev_impl(int qd, const struct iovec *iov, int iovcnt)
+{
+	BRUH(writev(qd, iov, iovcnt));
 }

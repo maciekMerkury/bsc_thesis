@@ -24,10 +24,14 @@ int dpoll_getsockname(int qd, struct sockaddr *addr, socklen_t *addrlen);
 int dpoll_setsockopt(int qd, int level, int optname, const void *optval,
                      socklen_t optlen);
 
-ssize_t dpoll_send(int qd, const void *buf, size_t len);
 ssize_t dpoll_sendmsg(int qd, const struct msghdr *msg, int flags);
 
-ssize_t dpoll_recv(int qd, void *buf, size_t len);
 ssize_t dpoll_recvmsg(int qd, struct msghdr *msg, int flags);
 
 int dpoll_close(int qd);
+
+ssize_t dpoll_write(int qd, const void *buf, size_t count);
+ssize_t dpoll_read(int qd, void *buf, size_t count);
+
+ssize_t dpoll_readv(int qd, const struct iovec *iov, int iovcnt);
+ssize_t dpoll_writev(int qd, const struct iovec *iov, int iovcnt);

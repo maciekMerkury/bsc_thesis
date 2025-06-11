@@ -19,6 +19,11 @@
  * IN THE SOFTWARE.
  */
 
+#define read read2
+#define readv readv2
+#define write write2
+#define writev writev2
+
 #include "uv.h"
 #include "internal.h"
 
@@ -36,6 +41,11 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <limits.h> /* IOV_MAX */
+
+#undef read
+#undef readv
+#undef write
+#undef writev
 
 #if defined(__APPLE__)
 # include <sys/event.h>
@@ -69,6 +79,7 @@ union uv__cmsg {
    */
   char pad[256];
 };
+
 
 STATIC_ASSERT(256 == sizeof(union uv__cmsg));
 
@@ -663,9 +674,9 @@ static void uv__drain(uv_stream_t* stream) {
 
 static ssize_t uv__writev(int fd, struct iovec* vec, size_t n) {
   if (n == 1)
-    return write(fd, vec->iov_base, vec->iov_len);
+    return dpoll_write(fd, vec->iov_base, vec->iov_len);
   else
-    return writev(fd, vec, n);
+    return dpoll_writev(fd, vec, n);
 }
 
 
@@ -1063,7 +1074,7 @@ static void uv__read(uv_stream_t* stream) {
 
     if (!is_ipc) {
       do {
-        nread = read(uv__stream_fd(stream), buf.base, buf.len);
+        nread = dpoll_read(uv__stream_fd(stream), buf.base, buf.len);
       }
       while (nread < 0 && errno == EINTR);
     } else {
