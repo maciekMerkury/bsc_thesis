@@ -457,6 +457,8 @@ int uv__io_uring_register(int fd, unsigned opcode, void* arg, unsigned nargs) {
 
 
 static int uv__use_io_uring(uint32_t flags) {
+  // dont use io_uring at all
+  return 0;
 #if defined(__ANDROID_API__)
   return 0;  /* Possibly available but blocked by seccomp. */
 #elif defined(__arm__) && __SIZEOF_POINTER__ == 4

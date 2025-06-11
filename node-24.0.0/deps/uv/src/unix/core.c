@@ -258,7 +258,7 @@ int uv__socket_sockopt(uv_handle_t* handle, int optname, int* value) {
   if (*value == 0)
     r = getsockopt(fd, SOL_SOCKET, optname, value, &len);
   else
-    r = setsockopt(fd, SOL_SOCKET, optname, (const void*) value, len);
+    r = dpoll_setsockopt(fd, SOL_SOCKET, optname, (const void*) value, len);
 
   if (r < 0)
     return UV__ERR(errno);
@@ -508,13 +508,11 @@ int uv__socket(int domain, int type, int protocol) {
   int sockfd;
   int err;
 
-  if (type == SOCK_STREAM) {
-    sockfd = dpoll_socket(domain, type, protocol);
-    if (sockfd != -1)
-      return sockfd;
+  sockfd = dpoll_socket(domain, type, protocol);
+  if (sockfd != -1)
+    return sockfd;
 
-    return UV__ERR(errno);
-  }
+  return UV__ERR(errno);
 
 #if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
   sockfd = socket(domain, type | SOCK_NONBLOCK | SOCK_CLOEXEC, protocol);
@@ -541,7 +539,7 @@ int uv__socket(int domain, int type, int protocol) {
 #if defined(SO_NOSIGPIPE)
   {
     int on = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+    dpoll_setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
   }
 #endif
 
@@ -2061,7 +2059,7 @@ int uv__sock_reuseport(int fd) {
   /* FreeBSD 12 introduced a new socket option named SO_REUSEPORT_LB
    * with the capability of load balancing, it's the substitution of
    * the SO_REUSEPORTs on Linux and DragonFlyBSD. */
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT_LB, &on, sizeof(on)))
+  if (dpoll_setsockopt(fd, SOL_SOCKET, SO_REUSEPORT_LB, &on, sizeof(on)))
     return UV__ERR(errno);
 #elif (defined(__linux__) || \
       defined(_AIX73) || \
@@ -2083,7 +2081,7 @@ int uv__sock_reuseport(int fd) {
    * binding to the same address and port, without load balancing.
    * Solaris 11.4 extended SO_REUSEPORT with the capability of load balancing.
    */
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)))
+  if (dpoll_setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)))
     return UV__ERR(errno);
 #else
   (void) (fd);

@@ -426,7 +426,7 @@ int uv__stream_open(uv_stream_t* stream, int fd, int flags) {
 
 #if defined(__APPLE__)
   enable = 1;
-  if (setsockopt(fd, SOL_SOCKET, SO_OOBINLINE, &enable, sizeof(enable)) &&
+  if (dpoll_setsockopt(fd, SOL_SOCKET, SO_OOBINLINE, &enable, sizeof(enable)) &&
       errno != ENOTSOCK &&
       errno != EINVAL) {
     return UV__ERR(errno);

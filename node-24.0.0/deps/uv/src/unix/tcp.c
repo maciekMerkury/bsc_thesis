@@ -167,7 +167,7 @@ int uv__tcp_bind(uv_tcp_t* tcp,
     return err;
 
   on = 1;
-  if (setsockopt(tcp->io_watcher.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
+  if (dpoll_setsockopt(tcp->io_watcher.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
     return UV__ERR(errno);
 
   if (flags & UV_TCP_REUSEPORT) {
@@ -180,7 +180,7 @@ int uv__tcp_bind(uv_tcp_t* tcp,
 #ifdef IPV6_V6ONLY
   if (addr->sa_family == AF_INET6) {
     on = (flags & UV_TCP_IPV6ONLY) != 0;
-    if (setsockopt(tcp->io_watcher.fd,
+    if (dpoll_setsockopt(tcp->io_watcher.fd,
                    IPPROTO_IPV6,
                    IPV6_V6ONLY,
                    &on,
@@ -405,7 +405,7 @@ int uv_tcp_close_reset(uv_tcp_t* handle, uv_close_cb close_cb) {
     return UV_EINVAL;
 
   fd = uv__stream_fd(handle);
-  if (0 != setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l))) {
+  if (0 != dpoll_setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l))) {
     if (errno == EINVAL) {
       /* Open Group Specifications Issue 7, 2018 edition states that
        * EINVAL may mean the socket has been shut down already.
@@ -440,7 +440,7 @@ int uv__tcp_listen(uv_tcp_t* tcp, int backlog, uv_connection_cb cb) {
   if (err)
     return err;
 
-  if (listen(tcp->io_watcher.fd, backlog))
+  if (dpoll_listen(tcp->io_watcher.fd, backlog))
     return UV__ERR(errno);
 
   tcp->connection_cb = cb;
@@ -455,7 +455,7 @@ int uv__tcp_listen(uv_tcp_t* tcp, int backlog, uv_connection_cb cb) {
 
 
 int uv__tcp_nodelay(int fd, int on) {
-  if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)))
     return UV__ERR(errno);
   return 0;
 }
@@ -478,7 +478,7 @@ int uv__tcp_keepalive(int fd, int on, unsigned int delay) {
   (void) &intvl;
   (void) &cnt;
 
-  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)))
+  if (dpoll_setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)))
     return UV__ERR(errno);
 
   if (!on)
@@ -523,29 +523,29 @@ int uv__tcp_keepalive(int fd, int on, unsigned int delay) {
   /* `TCP_KEEPIDLE`, `TCP_KEEPINTVL`, and `TCP_KEEPCNT` were not available on Solaris
    * until version 11.4, but let's take a chance here. */
 #if defined(TCP_KEEPIDLE) && defined(TCP_KEEPINTVL) && defined(TCP_KEEPCNT)
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)))
     return UV__ERR(errno);
 
   intvl = 10; /* required at least 10 seconds */
   UV_KEEPALIVE_FACTOR(intvl);
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl)))
     return UV__ERR(errno);
 
   cnt = 1; /* 1 retry, ensure (TCP_KEEPINTVL * TCP_KEEPCNT) is 10 seconds */
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt)))
     return UV__ERR(errno);
 #else
   /* Fall back to the first implementation of tcp-alive mechanism for older Solaris,
    * simulate the tcp-alive mechanism on other platforms via `TCP_KEEPALIVE_THRESHOLD` + `TCP_KEEPALIVE_ABORT_THRESHOLD`.
    */
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE_THRESHOLD, &idle, sizeof(idle)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE_THRESHOLD, &idle, sizeof(idle)))
     return UV__ERR(errno);
 
   /* Note that the consequent probes will not be sent at equal intervals on Solaris,
    * but will be sent using the exponential backoff algorithm. */
   int time_to_abort = 10; /* 10 seconds */
   UV_KEEPALIVE_FACTOR(time_to_abort);
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE_ABORT_THRESHOLD, &time_to_abort, sizeof(time_to_abort)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE_ABORT_THRESHOLD, &time_to_abort, sizeof(time_to_abort)))
     return UV__ERR(errno);
 #endif
 
@@ -554,24 +554,24 @@ int uv__tcp_keepalive(int fd, int on, unsigned int delay) {
   idle = delay;
   UV_KEEPALIVE_FACTOR(idle);
 #ifdef TCP_KEEPIDLE
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)))
     return UV__ERR(errno);
 #elif defined(TCP_KEEPALIVE)
   /* Darwin/macOS uses TCP_KEEPALIVE in place of TCP_KEEPIDLE. */
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
     return UV__ERR(errno);
 #endif
 
 #ifdef TCP_KEEPINTVL
   intvl = 1;  /* 1 second; same as default on Win32 */
   UV_KEEPALIVE_FACTOR(intvl);
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl)))
     return UV__ERR(errno);
 #endif
 
 #ifdef TCP_KEEPCNT
   cnt = 10;  /* 10 retries; same as hardcoded on Win32 */
-  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt)))
+  if (dpoll_setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt)))
     return UV__ERR(errno);
 #endif
 
