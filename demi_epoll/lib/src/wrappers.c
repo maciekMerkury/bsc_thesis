@@ -1,24 +1,30 @@
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/uio.h>
 
-#include "dpoll.h"
 #include "impls.h"
+#include "log.h"
 #include "sockets.h"
 
-int dpoll_create(int flags)
+static inline int maybe_add(int ret, int off)
 {
-	return dpoll_create_impl(flags) + DPOLL_EPOLL_OFFSET;
+	return ret > -1 ? ret + off : -1;
 }
 
-int dpoll_ctl(int dpollfd, int op, int fd, struct epoll_event *event)
+int dpoll_epoll_create(int flags)
+{
+	return maybe_add(dpoll_create_impl(flags), DPOLL_EPOLL_OFFSET);
+}
+
+int dpoll_epoll_ctl(int dpollfd, int op, int fd, struct epoll_event *event)
 {
 	assert(qd_is_dpoll(dpollfd));
 	return dpoll_ctl_impl(get_epoll_fd(dpollfd), op, fd,
 	                      event);
 }
 
-int dpoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
-                int timeout, const sigset_t *sigmask)
+int dpoll_epoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
+                      int timeout, const sigset_t *sigmask)
 {
 	assert(qd_is_dpoll(dpollfd));
 	return dpoll_pwait_impl(get_epoll_fd(dpollfd), events, maxevents,
@@ -27,11 +33,18 @@ int dpoll_pwait(int dpollfd, struct epoll_event *events, int maxevents,
 
 int dpoll_socket(int domain, int type, int protocol)
 {
-	demi_log("creating a socket for domain %d\n", domain);
+	demi_log("domain: %d, type: %d\n", domain, type);
+	if (domain == AF_INET6) {
+		demi_log("domain requested is IPV4, we do not support this\n");
+		abort();
+	}
+	int fd;
 	if (domain == AF_INET && type == SOCK_STREAM)
-		return dpoll_socket_impl(domain, type, protocol) +
-		       DPOLL_SOCKET_OFFSET;
-	return socket(domain, type, protocol);
+		fd = maybe_add(dpoll_socket_impl(), DPOLL_SOCKET_OFFSET);
+	else
+		fd = socket(domain, type, protocol);
+	demi_log("socket: %d\n", fd);
+	return fd;
 }
 
 int dpoll_bind(int qd, const struct sockaddr *addr, socklen_t addrlen)
@@ -51,7 +64,9 @@ int dpoll_connect(int qd, const struct sockaddr *addr, socklen_t size)
 int dpoll_accept(int qd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	if (qd_is_dpoll(qd))
-		return dpoll_accept_impl(get_socket_fd(qd), addr, addrlen);
+		return maybe_add(
+			dpoll_accept_impl(get_socket_fd(qd), addr, addrlen),
+			DPOLL_SOCKET_OFFSET);
 	return accept(qd, addr, addrlen);
 }
 

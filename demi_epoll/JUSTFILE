@@ -1,0 +1,18 @@
+default:
+  just --list
+
+build_dir:
+  mkdir build
+
+cmake_debug: build_dir
+  cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Debug
+
+cmake_release: build_dir
+  cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release
+
+build:
+  cmake --build build
+
+install: build
+  cmake --install build
+

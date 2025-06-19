@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <sys/socket.h>
-#include "log.h"
+#include "epoll_wrapper.h"
 #include <stdbool.h>
 #include <sys/epoll.h>
 
@@ -31,7 +31,7 @@ static inline int get_socket_fd(int qd)
 	return qd - DPOLL_SOCKET_OFFSET;
 }
 
-int dpoll_socket_impl(int domain, int type, int protocol);
+int dpoll_socket_impl(void);
 
 int dpoll_bind_impl(int qd, const struct sockaddr *addr, socklen_t addrlen);
 
@@ -60,10 +60,10 @@ int dpoll_ctl_impl(int dpollfd, int op, int fd, struct epoll_event *event);
 int dpoll_pwait_impl(int dpollfd, struct epoll_event *events, int maxevents,
                      int timeout, const sigset_t *sigmask);
 
-/// functions only used when I want to print something
-void debug_print(void);
 ssize_t dpoll_write_impl(int qd, const void *buf, size_t count);
 ssize_t dpoll_read_impl(int qd, void *buf, size_t count);
 
 ssize_t dpoll_readv_impl(int qd, const struct iovec *iov, int iovcnt);
 ssize_t dpoll_writev_impl(int qd, const struct iovec *iov, int iovcnt);
+
+uint32_t available_events(const epoll_item_t *it);

@@ -3,9 +3,10 @@ project(demi_epoll_project C)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_COLOR_DIAGNOSTICS ON)
 
-option(ENABLE_SANITIZERS "Enable Address and Undefined Behavior sanitizers" ON)
+option(ENABLE_SANITIZERS "Enable Address and Undefined Behavior sanitizers" OFF)
 
 add_compile_options(-Wall -Werror -Wno-trigraphs)
 
