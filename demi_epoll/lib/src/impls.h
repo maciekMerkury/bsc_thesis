@@ -63,7 +63,7 @@ int dpoll_pwait_impl(int dpollfd, struct epoll_event *events, int maxevents,
 ssize_t dpoll_write_impl(int qd, const void *buf, size_t count);
 ssize_t dpoll_read_impl(int qd, void *buf, size_t count);
 
-ssize_t dpoll_readv_impl(int qd, const struct iovec *iov, int iovcnt);
+ssize_t dpoll_readv_impl(int qd, struct iovec *iov, int iovcnt);
 ssize_t dpoll_writev_impl(int qd, const struct iovec *iov, int iovcnt);
 
 uint32_t available_events(const epoll_item_t *it);

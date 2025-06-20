@@ -26,8 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <demi_epoll/dpoll.h>
 
-#include "demi_epoll/log.h"
 
 static int initialised = 0;
 
@@ -37,9 +37,8 @@ int uv_loop_init(uv_loop_t* loop) {
   int err;
 
   if (!initialised) {
-    demi_log_init();
     initialised = 1;
-    demi_log("demi log initialised\n");
+    dpoll_init();
   }
 
   saved_data = loop->data;

@@ -129,7 +129,7 @@ ssize_t dpoll_read(int qd, void *buf, size_t count)
 	return read(qd, buf, count);
 }
 
-ssize_t dpoll_readv(int qd, const struct iovec *iov, int iovcnt)
+ssize_t dpoll_readv(int qd, struct iovec *iov, int iovcnt)
 {
 	if (qd_is_dpoll(qd))
 		return dpoll_readv_impl(get_socket_fd(qd), iov, iovcnt);

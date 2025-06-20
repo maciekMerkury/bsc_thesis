@@ -69,10 +69,14 @@ static size_t check_and_schedule_evs(epoll_t *ep, demi_qtoken_t **toks_dest)
 			}
 			assert(soc->recv.base.pending);
 			toks[tok_count++] = soc->recv.base.tok;
+			demi_log("waiting for EPOLLIN on %d with tok: %lu\n",
+			         it->demi_qd, soc->recv.base.tok);
 		}
 		if (rem & EPOLLOUT) {
 			assert(soc->send.base.pending);
 			toks[tok_count++] = soc->send.base.tok;
+			demi_log("waiting for EPOLLOUT on %d with tok: %lu\n",
+			         it->demi_qd, soc->send.base.tok);
 		}
 	}
 
@@ -236,12 +240,16 @@ int dpoll_pwait_impl(int dpollfd, struct epoll_event *events, int maxevents,
 	demi_qtoken_t *tokens = NULL;
 	const size_t tokens_len = check_and_schedule_evs(ep, &tokens);
 	demi_log("waiting on %lu tokens\n", tokens_len);
+	if (tokens_len == 1)
+		demi_log("waiting on token %lu\n", tokens[0]);
 	if (tokens_len == 0) {
 		epoll_timeout = timeout;
 		goto add_epoll_events;
 	}
-	if (ep->ready_list)
+	if (ep->ready_list) {
+		demi_log("ready list is not empty, so not going to wait\n");
 		timeout = 0; // we already have some events ready, just poll
+	}
 
 	const struct timespec ts = ms_timeout_to_timespec(timeout);
 	demi_qresult_t res;
@@ -255,6 +263,8 @@ int dpoll_pwait_impl(int dpollfd, struct epoll_event *events, int maxevents,
 	demi_log("looking for %d\n", res.qr_qd);
 	epoll_item_t *it = ep_find_item(ep, res.qr_qd);
 	assert(it);
+	demi_log("found %d\n", it->demi_qd);
+	assert(res.qr_qd == it->demi_qd);
 	socket_handle_event(soc_buf_get(it->soc_idx), &res);
 	if (!list_contains_elem(ep->ready_list, &it->ready_list_entry))
 		list_add_to_head(&ep->ready_list, &it->ready_list_entry);
@@ -294,16 +304,21 @@ ssize_t dpoll_write_impl(int qd, const void *buf, size_t count)
 ssize_t dpoll_read_impl(int qd, void *buf, size_t len)
 {
 	socket_t *soc = soc_buf_get(qd);
-	assert(soc->recv_off > -1);
+	assert(!socket_is_accepting(soc));
 	return maybe_read(soc, buf, len);
 }
 
-ssize_t dpoll_readv_impl(int qd, const struct iovec *iov, int iovcnt)
+// TODO: impl this in a smart way
+ssize_t dpoll_readv_impl(int qd, struct iovec *iov, int iovcnt)
 {
-	UNIMPLEMENTED();
+	socket_t *soc = soc_buf_get(qd);
+	assert(!socket_is_accepting(soc));
+	return maybe_readv(soc, iov, iovcnt);
 }
 
+// TODO: impl this in a smart way
 ssize_t dpoll_writev_impl(int qd, const struct iovec *iov, int iovcnt)
 {
-	UNIMPLEMENTED();
+	socket_t *soc = soc_buf_get(qd);
+	return maybe_writev(soc, iov, iovcnt);
 }

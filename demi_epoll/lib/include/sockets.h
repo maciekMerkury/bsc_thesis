@@ -33,5 +33,5 @@ int dpoll_close(int qd);
 ssize_t dpoll_write(int qd, const void *buf, size_t count);
 ssize_t dpoll_read(int qd, void *buf, size_t count);
 
-ssize_t dpoll_readv(int qd, const struct iovec *iov, int iovcnt);
+ssize_t dpoll_readv(int qd, struct iovec* iov, int iovcnt);
 ssize_t dpoll_writev(int qd, const struct iovec *iov, int iovcnt);
