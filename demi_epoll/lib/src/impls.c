@@ -141,13 +141,13 @@ int dpoll_accept_impl(int qd, struct sockaddr *addr, socklen_t *addrlen)
 	socket_t *soc = soc_buf_get(qd);
 	assert(soc->recv_off == -1);
 	struct sockaddr_in ad;
-	int ret = maybe_accept(soc, &ad);
-	if (ret < 0)
+	demi_result_t ret = maybe_accept(soc, &ad);
+	if (!result_is_ok(ret))
 		return -1;
 	int fd = dpoll_socket_impl();
 	socket_t *new_soc = soc_buf_get(fd);
 	*new_soc = (socket_t){
-		.qd = ret,
+		.qd = soc_from_result(ret),
 		.addr = ad,
 	};
 	if (addr) {

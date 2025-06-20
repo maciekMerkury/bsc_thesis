@@ -18,7 +18,7 @@ typedef struct epoll_item {
 	int soc_idx;
 
 	// TODO: figure out a better way of doing this
-	int demi_qd;
+	demi_socket_t demi_qd;
 	epoll_data_t data;
 } epoll_item_t;
 
@@ -40,7 +40,7 @@ int ep_ctl(epoll_t *ep, int op, int fd, const socket_t *soc,
 demi_qresult_t ep_wait(const epoll_t *ep, const struct timespec *timeout,
                        demi_qtoken_t *toks, size_t tok_size);
 
-epoll_item_t *ep_find_item(epoll_t *ep, int qd);
+epoll_item_t *ep_find_item(epoll_t *ep, demi_socket_t qd);
 
 /// tries to add all events from `ev->read_list_head` into the array
 ///

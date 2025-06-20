@@ -157,7 +157,7 @@ demi_qresult_t ep_wait(const epoll_t *ep, const struct timespec *timeout,
 	return res;
 }
 
-epoll_item_t *ep_find_item(epoll_t *ep, int qd)
+epoll_item_t *ep_find_item(epoll_t *ep, demi_socket_t qd)
 {
 	epoll_item_t search = { .demi_qd = qd };
 	epoll_item_t *it = RB_FIND(epoll_head, &ep->items, &search);

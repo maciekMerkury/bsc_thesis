@@ -47,7 +47,7 @@ static void sga_new(struct sga *sga, size_t size)
 	assert(!sga_is_empty(sga));
 }
 
-int maybe_accept(socket_t *soc, struct sockaddr_in *addr)
+demi_result_t maybe_accept(socket_t *soc, struct sockaddr_in *addr)
 {
 	if (accept_is_empty(&soc->accept)) {
 		assert(demi_accept(&soc->accept.base.tok, soc->qd) == 0);
@@ -76,17 +76,10 @@ int maybe_accept(socket_t *soc, struct sockaddr_in *addr)
 	}
 
 	*addr = soc->accept.elem.addr;
-	int qd = soc->accept.elem.qd;
+	const demi_socket_t qd = soc->accept.elem.qd;
 	accept_free(&soc->accept);
 	demi_log("soc %d accepted a new connection with qd %i\n", soc->qd, qd);
-	return qd;
-
-	// demi_log("unreachable state in %s\n", __func__);
-	// abort();
-
-would_block:
-	errno = EWOULDBLOCK;
-	return -1;
+	return result_from_soc(qd);
 }
 
 ssize_t maybe_write(socket_t *soc, const void *buf, size_t len)
@@ -156,7 +149,7 @@ int socket_init(socket_t *soc)
 {
 	memset(soc, 0, sizeof(*soc));
 	accept_free(&soc->accept);
-	const int ret = demi_socket(&soc->qd, AF_INET, SOCK_STREAM, 0);
+	const int ret = demi_socket((int *)&soc->qd, AF_INET, SOCK_STREAM, 0);
 	DEMI_ERR(ret, "socket init\n");
 	return 0;
 }
