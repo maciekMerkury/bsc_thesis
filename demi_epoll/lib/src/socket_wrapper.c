@@ -25,8 +25,8 @@ static inline bool accept_is_empty(const struct accept *acc)
 
 static inline void accept_free(struct accept *acc)
 {
+	memset(acc, 0, sizeof(*acc));
 	acc->elem.qd = -1;
-	acc->base.pending = false;
 }
 
 static void sga_free(struct sga *sga)
@@ -37,8 +37,10 @@ static void sga_free(struct sga *sga)
 		demi_log("seg count: %d\n", sga->elem.sga_numsegs);
 		demi_log("sga_free: %s\n", strerror(ret));
 	}
-	sga->elem.sga_numsegs = 0;
-	sga->base.pending = false;
+	memset(sga, 0, sizeof(*sga));
+	// sga->elem.sga_numsegs = 0;
+	// sga->base.pending = false;
+	// sga->base.tok = 0;
 }
 
 static void sga_new(struct sga *sga, size_t size)
@@ -78,7 +80,7 @@ demi_result_t maybe_accept(socket_t *soc, struct sockaddr_in *addr)
 	*addr = soc->accept.elem.addr;
 	const demi_socket_t qd = soc->accept.elem.qd;
 	accept_free(&soc->accept);
-	demi_log("soc %d accepted a new connection with qd %i\n", soc->qd, qd);
+	demi_log("soc %d accepted a new connection with qd %u\n", soc->qd, qd);
 	return result_from_soc(qd);
 }
 
@@ -145,16 +147,24 @@ would_block:
 	return -1;
 }
 
-int socket_init(socket_t *soc)
+socket_t *socket_init(void)
 {
-	memset(soc, 0, sizeof(*soc));
+	socket_t *soc = calloc(1, sizeof(*soc));
+	assert(soc);
 	accept_free(&soc->accept);
+	soc->ref_counter = 1;
+	soc->open = true;
+
 	const int ret = demi_socket((int *)&soc->qd, AF_INET, SOCK_STREAM, 0);
-	DEMI_ERR(ret, "socket init\n");
-	return 0;
+	if (ret != 0) {
+		errno = ret;
+		free(soc);
+		return NULL;
+	}
+	return soc;
 }
 
-void socket_destroy(socket_t *soc)
+static void socket_flush_and_close(socket_t *soc)
 {
 	struct sga *sgas[2] = { &soc->send, &soc->recv };
 	const int sgas_count = 2 - socket_is_accepting(soc);
@@ -179,6 +189,22 @@ void socket_destroy(socket_t *soc)
 		}
 	}
 	assert(demi_close(soc->qd) == 0);
+}
+
+socket_t *socket_clone(socket_t *soc)
+{
+	++soc->ref_counter;
+	return soc;
+}
+
+void socket_close(socket_t *soc)
+{
+	if (!soc->open) {
+		socket_flush_and_close(soc);
+	}
+	if (--soc->ref_counter == 0) {
+		free(soc);
+	}
 }
 
 bool socket_can_write(const socket_t *soc)

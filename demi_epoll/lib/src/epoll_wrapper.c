@@ -34,7 +34,7 @@ int ep_init(epoll_t *ep, int flags)
 	return 0;
 }
 
-void ep_destroy(epoll_t *ep)
+void ep_close(epoll_t *ep)
 {
 	close(ep->epollfd);
 	free(ep->qtokens);
@@ -44,7 +44,7 @@ void ep_destroy(epoll_t *ep)
 	}
 }
 
-static int epoll_add(epoll_t *ep, const socket_t *soc,
+static int epoll_add(epoll_t *ep, socket_t *soc,
                      int fd, struct epoll_event *ev)
 {
 	// TODO: think if we should actually check if the entry is already present
@@ -53,8 +53,7 @@ static int epoll_add(epoll_t *ep, const socket_t *soc,
 	epoll_item_t *it = calloc(1, sizeof(*it));
 	assert(it);
 	*it = (epoll_item_t){
-		.soc_idx = fd,
-		.demi_qd = soc->qd,
+		.soc = socket_clone(soc),
 		.subevs = ev->events,
 		.data = ev->data,
 	};
@@ -64,11 +63,13 @@ static int epoll_add(epoll_t *ep, const socket_t *soc,
 	return 0;
 }
 
-static int epoll_del(epoll_t *ep, int qd)
+static int epoll_del(epoll_t *ep, demi_socket_t qd)
 {
 	epoll_item_t *it = ep_find_item(ep, qd);
 	if (!it)
 		return -1;
+	socket_close(it->soc);
+	demi_log("removing %u\n", it->soc->qd);
 	RB_REMOVE(epoll_head, &ep->items, it);
 	if (!list_is_empty(&it->ready_list_entry))
 		list_remove(&it->ready_list_entry);
@@ -76,7 +77,8 @@ static int epoll_del(epoll_t *ep, int qd)
 	return 0;
 }
 
-static int epoll_mod(epoll_t *ep, int qd, const struct epoll_event *ev)
+static int epoll_mod(epoll_t *ep, demi_socket_t qd,
+                     const struct epoll_event *ev)
 {
 	epoll_item_t *it = ep_find_item(ep, qd);
 	if (!it)
@@ -87,7 +89,7 @@ static int epoll_mod(epoll_t *ep, int qd, const struct epoll_event *ev)
 }
 
 
-int ep_ctl(epoll_t *ep, int op, int fd, const socket_t *soc,
+int ep_ctl(epoll_t *ep, int op, int fd, socket_t *soc,
            struct epoll_event *ev)
 {
 	switch (op) {
@@ -117,12 +119,6 @@ int ep_drain_ready_list(epoll_t *ep, struct epoll_event *evs, int evs_size)
 	epoll_item_t *it = container_of(ep->ready_list, epoll_item_t,
 	                                ready_list_entry);
 
-	// make the list non-cyclic
-	// ep->ready_list->prev->next = NULL;
-	// ep->ready_list->prev = NULL;
-	// ep->ready_list = NULL;
-
-	// TODO: finish this code
 	while (events_idx < evs_size) {
 		evs[events_idx++] = (struct epoll_event){
 			.events = available_events(it),
@@ -159,7 +155,8 @@ demi_qresult_t ep_wait(const epoll_t *ep, const struct timespec *timeout,
 
 epoll_item_t *ep_find_item(epoll_t *ep, demi_socket_t qd)
 {
-	epoll_item_t search = { .demi_qd = qd };
+	socket_t soc = { .qd = qd };
+	epoll_item_t search = { .soc = &soc };
 	epoll_item_t *it = RB_FIND(epoll_head, &ep->items, &search);
 	if (!it) {
 		errno = ENOENT;

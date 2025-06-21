@@ -2,7 +2,7 @@ default:
   just --list
 
 build_dir:
-  mkdir build
+  mkdir -p build
 
 cmake_debug: build_dir
   cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Debug

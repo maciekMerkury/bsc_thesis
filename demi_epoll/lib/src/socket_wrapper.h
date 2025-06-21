@@ -17,6 +17,8 @@ MAYBE_DEF(demi_accept_result_t, accept);
 
 typedef struct socket {
 	demi_socket_t qd;
+	uint32_t ref_counter;
+	bool open;
 	struct sockaddr_in addr;
 
 	struct sga send;
@@ -29,8 +31,9 @@ typedef struct socket {
 	};
 } socket_t;
 
-int socket_init(socket_t *soc);
-void socket_destroy(socket_t *soc);
+socket_t *socket_init(void);
+socket_t *socket_clone(socket_t *soc);
+void socket_close(socket_t *soc);
 ssize_t maybe_write(socket_t *soc, const void *buf, size_t len);
 ssize_t maybe_read(socket_t *soc, void *buf, size_t len);
 ssize_t maybe_writev(socket_t *soc, const struct iovec *iov, int iov_cnt);
@@ -47,5 +50,5 @@ void socket_handle_event(socket_t *soc, const demi_qresult_t *res);
 
 static inline bool socket_is_accepting(const socket_t *soc)
 {
-	return soc->recv_off == -1;
+	return soc->open && soc->recv_off == -1;
 }

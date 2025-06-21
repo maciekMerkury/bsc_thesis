@@ -32,7 +32,7 @@ target_include_directories(demi_epoll
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/include
 )
-target_link_libraries(demi_epoll PUBLIC demikernel)
+target_link_libraries(demi_epoll PRIVATE demikernel)
 
 install(TARGETS demi_epoll
         LIBRARY DESTINATION lib
