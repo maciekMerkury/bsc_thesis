@@ -1,20 +1,20 @@
 #!/bin/bash
 
-push ./demikernel
+pushd ./demikernel
 make init
 make all-libs
 sudo make install INSTALL_PREFIX=$INSTAL_PREFIX
 ./scripts/generate-config.sh
 echo "copy config into $CONFIG_PATH"
-pop
+popd
 
-push ./demi_epoll
+pushd ./demi_epoll
 make build
 sudo make install INSTALL_PREFIX=$INSTALL_PREFIX
-pop
+popd
 
-push ./node-24.0.0/
+pushd ./node-24.0.0/
 ./configure --ninja --prefix=$INSTALL_PREFIX
 make all
 sudo make install
-pop
+popd

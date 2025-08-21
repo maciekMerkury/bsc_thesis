@@ -15,6 +15,7 @@ The building process consists of following steps:
 
 1. install rustup
 2. if on ubuntu: `demikernel/scripts/install-dev-packages.sh`. otherwise see Demikernel's documentation
+3. for the generate-config script to work, ifconfig must be installed. this can be done on ubuntu by installing the `net-tools` package
 
 ## Environmental Variables
 
