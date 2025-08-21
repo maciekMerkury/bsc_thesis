@@ -1,3 +1,6 @@
 [submodule "demikernel"]
 	path = demikernel
 	url = https://github.com/microsoft/demikernel.git
+[submodule "demi_epoll"]
+	path = demi_epoll
+	url = https://github.com/maciekMerkury/demi_epoll.git
