@@ -1,0 +1,3 @@
+[submodule "demikernel"]
+	path = demikernel
+	url = https://github.com/microsoft/demikernel.git
